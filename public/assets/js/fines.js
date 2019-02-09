@@ -55,6 +55,10 @@ var fines = {
                     cache: false
                 }).done(function (data) {
 
+                    if (data.length === 0) {
+                        return false;
+                    }
+
                     if (data.status === 1 && data.result_code == 'Ok') {
 
                         clearInterval(timer);
