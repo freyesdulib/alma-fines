@@ -43,10 +43,9 @@ exports.get = function (token, uid, callback) {
             uid: uid,
             status: 1
         })
-        .whereRaw('DATE(time_stamp) = CURRENT_DATE')
-        .orderBy('time_stamp', 'desc')
+        .orderBy('id', 'desc')
         .limit(1)
-        .select('*')
+        .select('status', 'result_code', 'amount_paid')
         .then(function (data) {
             callback(data);
             return null;
