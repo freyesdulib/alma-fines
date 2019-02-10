@@ -13,9 +13,6 @@ module.exports = function (app) {
         .get(Token.verify, Fines.makePayment)
         .post(Token.verify, Fines.makePayment);
 
-    app.route('/status')
-        .get(Token.verify, Fines.status);
-
     app.route('/api/status/:api')
         .post(Fines.apiStatus);
 };
