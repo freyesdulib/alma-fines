@@ -112,6 +112,7 @@
     fines.saveBalance(JSON.stringify(balance));
     fines.calculateBalance();
     fines.disableButton('payOnline', 'Loading form...');
+    fines.checkStatus();
     fines.cancel();
 </script>
 <% include partials/footer %>

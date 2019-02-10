@@ -44,62 +44,28 @@ var fines = {
             $('#cancel').hide();
             $(this).empty().append('Processing Payment...');
             $(this).parents('form').submit();
-
-            // check payment status
-            var timer = setInterval(function () {
-
-                $.ajax({
-                    url: location.protocol + '//' + document.domain + ':' + location.port + '/status?t=' + token + '&uid=' + uid,
-                    type: 'get',
-                    dataType: 'json',
-                    cache: false
-                }).done(function (data) {
-
-                    if (data.length === 0) {
-                        return false;
-                    }
-
-                    if (data.status === 1 && data.result_code == 'Ok') {
-
-                        clearInterval(timer);
-
-                        $('#paymentForm').html('<div class="alert alert-success"><i class="fa fa-check-circle"></i> Payment was successful. Amount paid: ($' + data.amount_paid + ')   One moment please...</div>');
-
-                         setTimeout(function () {
-                         window.location = location.protocol + '//' + document.domain + ':' + location.port + '/fines' + window.location.search;
-                         }, 5000);
-
-                        window.scrollTo(0, 0);
-
-                        return false;
-
-                    } else if (data.status === 1 && data.result_code == 'Error') {
-
-                        clearInterval(timer);
-
-                        $('#paymentForm').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Payment failed.  One moment please...</div>');
-
-                         setTimeout(function () {
-                         window.location = location.protocol + '//' + document.domain + ':' + location.port + '/fines' + window.location.search;
-                         }, 3000);
-
-                        window.scrollTo(0, 0);
-
-                        return false;
-                    }
-
-                }).fail(function (jqXHR, textStatus) {
-
-                    $('#paymentForm').html('<div class="alert alert-danger">Payment process failed.  We\'re sorry for the inconvenience.  One moment please...</div>');
-
-                    setTimeout(function () {
-                        window.location = location.protocol + '//' + document.domain + ':' + location.port + '/fines' + window.location.search;
-                    }, 3000);
-
-                });
-
-            }, 1000);
         });
+    },
+    checkStatus: function () {
+
+        var query = window.location.search.split('='),
+            status = query[query.length-1];
+
+        if (status === '1') {
+            $('#message').html('<div class="alert alert-success"><i class="fa fa-check-circle"></i> Payment was successful.</div>');
+
+            setTimeout(function () {
+                $('#message').empty();
+                window.location.href = location.protocol + '//' + document.domain + ':' + location.port + '/login';
+            }, 10000);
+
+        } else if (status === '0') {
+            $('#message').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Payment failed.</div>');
+
+            setTimeout(function () {
+                $('#message').empty();
+            }, 5000);
+        }
     },
     cancel: function () {
         $('#cancel').click(function () {

@@ -159,17 +159,20 @@ exports.makePayment = function (req, res) {
 
             if (transactionResult.result_code === 'Ok' && transactionResult.auth_code !== '000000') {
                 logger.module().debug('INFO: Authorize.net payment successful.');
+                transactionResult.status = 1;
                 callback(false, transactionResult);
                 return false;
             } else {
                 logger.module().debug('ERROR: An unknown transaction error has occurred while making request to authorize.net.');
+                transactionResult.amount_paid = '0.00';
+                transactionResult.status = 0;
                 callback(false, transactionResult);
                 return false;
             }
         });
     }
 
-    function saveTransactionInfo (data, callback) {
+    function saveUserInfo (data, callback) {
 
         /* collect response from authorize.net and save to local DB */
         var username = payment.email.split('@');
@@ -177,22 +180,18 @@ exports.makePayment = function (req, res) {
         data.uid = id;
         data.token = token;
         data.username = username[0];
+        callback(false, data);
 
-        Model.save(data, function (result) {
-            data.saved = result;
-            callback(false, data);
-            return false;
-        });
     }
 
     function closeAlmaFines (data, callback) {
 
         if (data.result_code !== 'Ok' || data.auth_code === '000000') {
+
             logger.module().debug('ERROR: Transaction error: payment not made. Fines will not be closed in Alma');
-            Model.update(data);
-            data.alma_fine_closed = false;
             callback(false, data);
             return false;
+
         } else {
 
             // close out fines in Alma
@@ -213,7 +212,6 @@ exports.makePayment = function (req, res) {
 
                 if (fineArr.length === 0) {
                     clearInterval(timer);
-                    Model.update(data);
                     callback(false, data);
                     return false;
                 }
@@ -234,13 +232,13 @@ exports.makePayment = function (req, res) {
                     }
                 });
 
-            }, 250);
+            }, 300);
         }
     }
 
     Async.waterfall([
         payFines,
-        saveTransactionInfo,
+        saveUserInfo,
         closeAlmaFines
     ], function (error, data) {
 
@@ -249,7 +247,15 @@ exports.makePayment = function (req, res) {
             throw error;
         }
 
-        logger.module().debug('INFO: Payment proccess complete. Result = ' + data.result_code);
+        var id = new Buffer(data.uid).toString('base64'),
+            t = data.token,
+            status = data.status;
+
+        Model.save(data, function (result) {
+            logger.module().debug('INFO: Payment proccess complete. Result = ' + data.result_code);
+            res.redirect('/fines?t=' + t + '&id=' + id + '&status=' + status);
+            return false;
+        });
 
         /*  TODO: unable to send email via DU mail server
         var reciept = {};
@@ -269,23 +275,6 @@ exports.makePayment = function (req, res) {
         }
         */
 
-    });
-};
-
-exports.status = function (req, res) {
-
-    var token = req.query.t,
-        uid = new Buffer(req.query.uid, 'base64').toString('ascii');
-
-    Model.get(token, uid, function (data) {
-
-        res.status(200).send({
-            content_type: {'Content-Type': 'application/json'},
-            status: data[0].status,
-            result_code: data[0].result_code,
-            amount_paid: data[0].amount_paid,
-            message: 'payment status.'
-        });
     });
 };
 
