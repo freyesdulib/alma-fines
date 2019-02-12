@@ -157,13 +157,25 @@ exports.makePayment = function (req, res) {
 
         Service.payFines(payment, function (transactionResult) {
 
-            if (transactionResult.result_code === 'Ok' && transactionResult.auth_code !== '000000') {
+            if (transactionResult.result_code === 'Ok' && transactionResult.response_code == '1') { // approved
                 logger.module().debug('INFO: Authorize.net payment successful.');
                 transactionResult.status = 1;
                 callback(false, transactionResult);
                 return false;
-            } else {
-                logger.module().debug('ERROR: An unknown transaction error has occurred while making request to authorize.net.');
+            } else if (transactionResult.response_code == '2') { // declined
+                logger.module().debug('ERROR: CC has been declined');
+                transactionResult.amount_paid = '0.00';
+                transactionResult.status = 0;
+                callback(false, transactionResult);
+                return false;
+            } else if (transactionResult.response_code == '3') {  // error
+                logger.module().debug('ERROR: An unknown transaction error occurred.');
+                transactionResult.amount_paid = '0.00';
+                transactionResult.status = 0;
+                callback(false, transactionResult);
+                return false;
+            } else if (transactionResult.response_code == '4') {  // held for review
+                logger.module().debug('INFO: CC transaction held for review.');
                 transactionResult.amount_paid = '0.00';
                 transactionResult.status = 0;
                 callback(false, transactionResult);
@@ -186,7 +198,7 @@ exports.makePayment = function (req, res) {
 
     function closeAlmaFines (data, callback) {
 
-        if (data.result_code !== 'Ok' || data.auth_code === '000000') {
+        if (data.response_code !== '1' && data.error_message !== undefined) {
 
             logger.module().debug('ERROR: Transaction error: payment not made. Fines will not be closed in Alma');
             callback(false, data);

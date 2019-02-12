@@ -59,10 +59,11 @@ exports.authCaptureTransaction = function (payment, callback) {
 
                 var transactionObj = {};
                 transactionObj.result_code = json.createTransactionResponse.messages[0].resultCode[0];
+                transactionObj.response_code = json.createTransactionResponse.transactionResponse[0].responseCode[0];
                 transactionObj.fines = JSON.stringify(payment.fines);
                 transactionObj.amount_paid = payment.fineTotal;
 
-                if (transactionObj.result_code === 'Ok') {
+                if (transactionObj.result_code === 'Ok' && transactionObj.response_code === '1') {
 
                     transactionObj.ref_id = json.createTransactionResponse.refId[0];
 
@@ -76,7 +77,9 @@ exports.authCaptureTransaction = function (payment, callback) {
 
                     callback(transactionObj);
 
-                } else if (transactionObj.result_code === 'Error') {
+                } else if (transactionObj.result_code === 'Error' || transactionObj.response_code !== '1') {
+
+                    transactionObj.error_message =  json.createTransactionResponse.transactionResponse[0].errors[0].error[0].errorText[0];
 
                     json.createTransactionResponse.transactionResponse.forEach(function (field) {
                         transactionObj.auth_code = field.authCode[0];
